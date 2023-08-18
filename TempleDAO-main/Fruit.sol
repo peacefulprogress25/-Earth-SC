@@ -11,10 +11,10 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 /**
  * Created and owned by the staking contract. 
  *
- * It mints and burns OGTemple as users stake/unstake
+ * It mints and burns Fruit as users stake/unstake
  */
-contract OGTemple is ERC20, ERC20Burnable, Ownable {
-    constructor() ERC20("OGTemple", "OG_TEMPLE") {}
+contract Fruit is ERC20, ERC20Burnable, Ownable {
+    constructor() ERC20("Fruit", "FRUIT") {}
 
     function mint(address to, uint256 amount) external onlyOwner {
       _mint(to, amount);

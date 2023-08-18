@@ -5,23 +5,17 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-
-// import "hardhat/console.sol";
-
 /**
- * How all exit of TEMPLE rewards are managed.
+ * How all exit of EARTH rewards are managed.
  */
 contract ExitQueue is Ownable {
     struct User {
         // Total currently in queue
         uint256 Amount;
-
         // First epoch for which the user is in the unstake queue
         uint256 FirstExitEpoch;
-
         // Last epoch for which the user has a pending unstake
         uint256 LastExitEpoch;
-
         // All epochs where the user has an exit allocation
         mapping(uint256 => uint256) Exits;
     }
@@ -32,16 +26,16 @@ contract ExitQueue is Ownable {
     // The first unwithdrawn epoch for the user
     mapping(address => User) public userData;
 
-    IERC20 public TEMPLE;   // TEMPLE
+    IERC20 public EARTH; // EARTH
 
-    // Limit of how much temple can exit per epoch
+    // Limit of how much earth can exit per epoch
     uint256 public maxPerEpoch;
 
-    // Limit of how much temple can exit per address per epoch
+    // Limit of how much earth can exit per address per epoch
     uint256 public maxPerAddress;
 
     // epoch size, in blocks
-    uint256 public epochSize; 
+    uint256 public epochSize;
 
     // the block we use to work out what epoch we are in
     uint256 public firstBlock;
@@ -49,16 +43,16 @@ contract ExitQueue is Ownable {
     // The next free block on which a user can commence their unstake
     uint256 public nextUnallocatedEpoch;
 
-    event JoinQueue(address exiter, uint256 amount);    
-    event Withdrawal(address exiter, uint256 amount);    
+    event JoinQueue(address exiter, uint256 amount);
+    event Withdrawal(address exiter, uint256 amount);
 
     constructor(
-        address _TEMPLE,
+        address _EARTH,
         uint256 _maxPerEpoch,
         uint256 _maxPerAddress,
-        uint256 _epochSize) {
-
-        TEMPLE = IERC20(_TEMPLE);
+        uint256 _epochSize
+    ) {
+        EARTH = IERC20(_EARTH);
 
         maxPerEpoch = _maxPerEpoch;
         maxPerAddress = _maxPerAddress;
@@ -80,7 +74,10 @@ contract ExitQueue is Ownable {
     }
 
     function setStartingBlock(uint256 _firstBlock) external onlyOwner {
-        require(_firstBlock < firstBlock, "Can only move start block back, not forward");
+        require(
+            _firstBlock < firstBlock,
+            "Can only move start block back, not forward"
+        );
         firstBlock = _firstBlock;
     }
 
@@ -88,17 +85,19 @@ contract ExitQueue is Ownable {
         return (block.number - firstBlock) / epochSize;
     }
 
-    function currentEpochAllocation(address _exiter, uint256 _epoch) external view returns (uint256) {
+    function currentEpochAllocation(
+        address _exiter,
+        uint256 _epoch
+    ) external view returns (uint256) {
         return userData[_exiter].Exits[_epoch];
     }
 
-    function join(address _exiter, uint256 _amount) external {        
+    function join(address _exiter, uint256 _amount) external {
         require(_amount > 0, "Amount must be > 0");
 
         if (nextUnallocatedEpoch < currentEpoch()) {
             nextUnallocatedEpoch = currentEpoch();
         }
-
         User storage user = userData[_exiter];
 
         uint256 unallocatedAmount = _amount;
@@ -111,11 +110,21 @@ contract ExitQueue is Ownable {
         while (unallocatedAmount > 0) {
             // work out allocation for the next available epoch
             uint256 allocationForEpoch = unallocatedAmount;
-            if (user.Exits[nextAvailableEpochForUser] + allocationForEpoch > maxPerAddress) {
-                allocationForEpoch = maxPerAddress - user.Exits[nextAvailableEpochForUser];
+            if (
+                user.Exits[nextAvailableEpochForUser] + allocationForEpoch >
+                maxPerAddress
+            ) {
+                allocationForEpoch =
+                    maxPerAddress -
+                    user.Exits[nextAvailableEpochForUser];
             }
-            if (totalPerEpoch[nextAvailableEpochForUser] + allocationForEpoch > maxPerEpoch) {
-                allocationForEpoch = maxPerEpoch - totalPerEpoch[nextAvailableEpochForUser];
+            if (
+                totalPerEpoch[nextAvailableEpochForUser] + allocationForEpoch >
+                maxPerEpoch
+            ) {
+                allocationForEpoch =
+                    maxPerEpoch -
+                    totalPerEpoch[nextAvailableEpochForUser];
             }
 
             // Bookkeeping
@@ -140,8 +149,7 @@ contract ExitQueue is Ownable {
 
         // update outside of main loop, so we spend gas once
         nextUnallocatedEpoch = _nextUnallocatedEpoch;
-
-        SafeERC20.safeTransferFrom(TEMPLE, msg.sender, address(this), _amount);
+        SafeERC20.safeTransferFrom(EARTH, msg.sender, address(this), _amount);
         emit JoinQueue(_exiter, _amount);
     }
 
@@ -166,7 +174,7 @@ contract ExitQueue is Ownable {
             delete userData[msg.sender];
         }
 
-        SafeERC20.safeTransfer(TEMPLE, msg.sender, amount);
-        emit Withdrawal(msg.sender, amount);    
+        SafeERC20.safeTransfer(EARTH, msg.sender, amount);
+        emit Withdrawal(msg.sender, amount);
     }
 }

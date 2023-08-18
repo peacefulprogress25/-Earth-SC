@@ -6,23 +6,23 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
-import "./TempleERC20Token.sol";
+import "./EarthERC20Token.sol";
 
 /**
- * Newly minted temple allocated to various temple strategies
+ * Newly minted earth allocated to various earth strategies
  *
- * Any temple held by this contract is assumed to be unused,
+ * Any earth held by this contract is assumed to be unused,
  * and hence doesn't effect the intrinsinc value calculation.
  *
  * It's only considered in circulation once a pool pulls
  * it's allowance.
  */
 contract MintAllowance is Ownable {
-    // Temple contract address
-    TempleERC20Token TEMPLE;
+    // Earth contract address
+    EarthERC20Token EARTH;
 
-    constructor(TempleERC20Token _TEMPLE) {
-      TEMPLE = _TEMPLE;
+    constructor(EarthERC20Token _EARTH) {
+      EARTH = _EARTH;
     }
 
     /**
@@ -32,16 +32,16 @@ contract MintAllowance is Ownable {
      * as an extra check and balance
      */
     function increaseMintAllowance(address _pool, uint256 _amount) external onlyOwner {
-      SafeERC20.safeTransferFrom(TEMPLE, msg.sender, address(this), _amount);
-      SafeERC20.safeIncreaseAllowance(TEMPLE, _pool, _amount);
+      SafeERC20.safeTransferFrom(EARTH, msg.sender, address(this), _amount);
+      SafeERC20.safeIncreaseAllowance(EARTH, _pool, _amount);
     }
 
     /**
      * Burn any unused mint allowance for a given pool
      */
     function burnUnusedMintAllowance(address _pool) external onlyOwner {
-      uint256 unusedMintAllowance = TEMPLE.allowance(address(this), _pool);
-      SafeERC20.safeDecreaseAllowance(TEMPLE, _pool, unusedMintAllowance);
-      TEMPLE.burn(unusedMintAllowance);
+      uint256 unusedMintAllowance = EARTH.allowance(address(this), _pool);
+      SafeERC20.safeDecreaseAllowance(EARTH, _pool, unusedMintAllowance);
+      EARTH.burn(unusedMintAllowance);
     }
 }

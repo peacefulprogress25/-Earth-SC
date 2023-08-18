@@ -8,10 +8,10 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract TempleERC20Token is ERC20, ERC20Burnable, Ownable, AccessControl {
+contract EarthERC20Token is ERC20, ERC20Burnable, Ownable, AccessControl {
     bytes32 public constant CAN_MINT = keccak256("CAN_MINT");
 
-    constructor() ERC20("Temple", "TEMPLE") {
+    constructor() ERC20("Earth", "EARTH") {
         _setupRole(DEFAULT_ADMIN_ROLE, owner());
     }
 

@@ -2,15 +2,15 @@ pragma solidity ^0.8.4;
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./OGTemple.sol";
+import "./Fruit.sol";
 
 /**
- * Bookkeeping for OGTemple that's locked
+ * Bookkeeping for Fruit that's locked
  */
-contract LockedOGTemple {
+contract LockedFruit {
     struct LockedEntry {
         // How many tokens are locked
-        uint256 BalanceOGTemple;
+        uint256 BalanceFruit;
 
         // WHen can the user unlock these tokens
         uint256 LockedUntilTimestamp;
@@ -19,30 +19,30 @@ contract LockedOGTemple {
     // All temple locked for any given user
     mapping(address => LockedEntry[]) public locked;
 
-    OGTemple public OG_TEMPLE; // The token being staked, for which TEMPLE rewards are generated
+    Fruit public FRUIT; // The token being staked, for which TEMPLE rewards are generated
 
-    event OGTempleLocked(address _staker, uint256 _amount, uint256 _lockedUntil);
-    event OGTempleWithdraw(address _staker, uint256 _amount);
+    event FruitLocked(address _staker, uint256 _amount, uint256 _lockedUntil);
+    event FruitWithdraw(address _staker, uint256 _amount);
 
-    constructor(OGTemple _OG_TEMPLE) {
-        OG_TEMPLE = _OG_TEMPLE;
+    constructor(Fruit _FRUIT) {
+        FRUIT = _FRUIT;
     }
 
     function numLocks(address _staker) external view returns(uint256) {
         return locked[_staker].length;
     }
 
-    /** lock up OG */
-    function lockFor(address _staker, uint256 _amountOGTemple, uint256 _lockedUntilTimestamp) public {
-        LockedEntry memory lockEntry = LockedEntry({BalanceOGTemple: _amountOGTemple, LockedUntilTimestamp: _lockedUntilTimestamp});
+    /** lock up Fruit */
+    function lockFor(address _staker, uint256 _amountFruit, uint256 _lockedUntilTimestamp) public {
+        LockedEntry memory lockEntry = LockedEntry({BalanceFruit: _amountFruit, LockedUntilTimestamp: _lockedUntilTimestamp});
         locked[_staker].push(lockEntry);
 
-        SafeERC20.safeTransferFrom(OG_TEMPLE, msg.sender, address(this), _amountOGTemple);
-        emit OGTempleLocked(_staker, _amountOGTemple, _lockedUntilTimestamp);
+        SafeERC20.safeTransferFrom(FRUIT, msg.sender, address(this), _amountFruit);
+        emit FruitLocked(_staker, _amountFruit, _lockedUntilTimestamp);
     }
 
-    function lock(uint256 _amountOGTemple, uint256 _lockedUntilTimestamp) external {
-        lockFor(msg.sender, _amountOGTemple, _lockedUntilTimestamp);
+    function lock(uint256 _amountFruit, uint256 _lockedUntilTimestamp) external {
+        lockFor(msg.sender, _amountFruit, _lockedUntilTimestamp);
     }
 
     /** Withdraw a specific locked entry */
@@ -57,8 +57,8 @@ contract LockedOGTemple {
         lockedEntries[_idx] = lockedEntries[lockedEntries.length-1];
         lockedEntries.pop();
 
-        SafeERC20.safeTransfer(OG_TEMPLE, _staker, entry.BalanceOGTemple);
-        emit OGTempleWithdraw(_staker, entry.BalanceOGTemple);
+        SafeERC20.safeTransfer(FRUIT, _staker, entry.BalanceFruit);
+        emit FruitWithdraw(_staker, entry.BalanceFruit);
     }
 
     function withdraw(uint256 _idx) external {
