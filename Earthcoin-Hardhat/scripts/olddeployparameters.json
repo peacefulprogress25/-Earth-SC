@@ -1,0 +1,22 @@
+{
+    "exitQueue": {
+        "maxPerEpoch": {
+            "type": "BigNumber",
+            "hex": "0x3635c9adc5dea00000"
+        },
+        "maxPerAddress": {
+            "type": "BigNumber",
+            "hex": "0x3635c9adc5dea00000"
+        },
+        "epochSize": "10"
+    },
+    "earthStaking": {
+        "epochSizeSeconds": "86400",
+        "startTimestamp": 1667978709
+    },
+    "presale": {
+        "mintMultiple": "12",
+        "unlockTimestamp": 1668070509
+    },
+    "stableCoin": "0x48F26679E7d51eC82EfBE9A381F2bFF49E46f863"
+}

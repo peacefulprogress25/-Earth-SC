@@ -1,0 +1,41 @@
+{
+  "name": "hardhat-project",
+  "scripts": {
+    "dev": "nodemon --watch .env index.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
+    "@nomiclabs/hardhat-ethers": "^2.0.3",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@nomiclabs/hardhat-web3": "^2.0.0",
+    "chai": "^4.3.4",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.5.2",
+    "hardhat": "^2.12.2"
+  },
+  "dependencies": {
+    "@emotion/styled": "^11.6.0",
+    "@mui/icons-material": "^5.2.5",
+    "@mui/lab": "^5.0.0-alpha.63",
+    "@mui/material": "^5.2.7",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@nomiclabs/hardhat-etherscan": "^2.1.8",
+    "@openzeppelin/contracts": "^4.4.1",
+    "axios": "^0.24.0",
+    "bignumber.js": "^9.0.2",
+    "child_process": "^1.0.2",
+    "date-fns": "^2.28.0",
+    "dotenv": "^10.0.0",
+    "epoch-timeago": "^1.1.9",
+    "express": "^4.17.2",
+    "light-toast": "^0.3.5",
+    "node-cron": "^3.0.0",
+    "nodemon": "^2.0.15",
+    "react": "^17.0.2",
+    "react-copy-to-clipboard": "^5.0.4",
+    "react-dom": "^17.0.2",
+    "web-vitals": "^2.1.2"
+  },
+  "proxy": "http://127.0.0.1:5000/"
+}

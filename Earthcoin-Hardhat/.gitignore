@@ -1,0 +1,13 @@
+node_modules
+.env
+
+bin/contracts
+
+
+#Hardhat files
+cache
+artifacts
+scripts/deployParameters.json
+scripts/deployAddresses.json
+scripts/harvestParameters.json
+scripts/setAllocatorsParameters.json

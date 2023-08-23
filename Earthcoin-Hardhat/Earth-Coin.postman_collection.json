@@ -1,0 +1,75 @@
+{
+	"info": {
+		"_postman_id": "8cbe1503-31e7-45d9-98c0-ff12e996f36e",
+		"name": "Earth-Coin",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "DeployAll",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/deploy-all",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"deploy-all"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "EnvPrivateKey",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"envKey\": \"x\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/env-key",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"env-key"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DeployAddresses",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/get-address",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"get-address"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
