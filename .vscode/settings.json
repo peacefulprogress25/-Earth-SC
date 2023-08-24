@@ -1,0 +1,7 @@
+{
+  "githubPullRequests.ignoredPullRequestBranches": [
+    "audit"
+  ],
+  "slither.solcPath": "",
+  "slither.hiddenDetectors": []
+}

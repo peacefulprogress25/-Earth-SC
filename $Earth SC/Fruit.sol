@@ -2,10 +2,13 @@ pragma solidity ^0.8.4;
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+// CHORE: remove unused import
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+// CHORE: remove unused import
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+// CHORE: remove unused import
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**

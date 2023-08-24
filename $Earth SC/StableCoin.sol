@@ -14,6 +14,7 @@ contract StableCoin is Context, ERC20 {
     /**
      * @dev Constructor that gives _msgSender() all of existing tokens.
      */
+    // QUESTION: Would recommend using EarthStableCoin instead of USDC. Could be flagged as imposter coin
     constructor() public ERC20("USD Coin", "USDC") {
         _mint(_msgSender(), 100000 * (10**uint256(decimals())));
     }
@@ -23,6 +24,7 @@ contract StableCoin is Context, ERC20 {
      * @param value The amount of tokens to mint.
      * @return A boolean that indicates if the operation was successful.
      */
+    // CHORE: Token minting should be restricted to a role
     function mint(uint256 value, address _address) public returns (bool) {
         _mint(_address, value);
         return true;

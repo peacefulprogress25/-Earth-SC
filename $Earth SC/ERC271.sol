@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
+// QUESTION: Is this file used? If not, remove it
+
 contract MyToken is ERC721, ERC721Burnable, Ownable {
     using Counters for Counters.Counter;
 

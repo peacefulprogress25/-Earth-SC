@@ -1,6 +1,7 @@
 pragma solidity ^0.8.4;
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+// @audit-report: remove unused imports
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -19,6 +20,9 @@ import "./EarthERC20Token.sol";
  */
 contract MintAllowance is Ownable {
     // Earth contract address
+    // QUESTION: what is pool here ? Do we have an interface ?
+    // @audit-report: make immutable
+    // @audit-report: would recommend using lowercase
     EarthERC20Token EARTH;
 
     constructor(EarthERC20Token _EARTH) {
