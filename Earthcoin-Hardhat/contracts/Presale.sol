@@ -1,75 +1,83 @@
-pragma solidity ^0.8.4;
 // SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "./EarthERC20Token.sol";
 import "./EarthTreasury.sol";
 import "./EarthStaking.sol";
-import "./PresaleAllocation.sol";
-import "./LockedFruit.sol";
-import "hardhat/console.sol";
-import "./ERC271.sol";
-import "./Nft.sol";
+import "./SoulBound.sol";
 
 /**
- * Presale campaign, which lets users to mint and stake based on current IV and a whitelist
+ * Presale campaign, which lets users mint and stake based on current IV and a whitelist
  */
 contract Presale is Ownable, Pausable {
     IERC20 public STABLEC; // STABLEC contract address
     EarthERC20Token public EARTH; // EARTH ERC20 contract
     EarthTreasury public TREASURY;
     EarthStaking public STAKING;
-    // Nft public NFT; //Staking contract
-    SoulBound public SOULBOUND; //New Staking contract
+    SoulBound public SOULBOUND; // New Staking contract
 
-    // presale mint multiple
+    // Presale mint multiple
     uint256 public mintMultiple;
 
-    uint256 public decamicalplacemintMultiple = 10;
-    // How much allocation has each user used.
+    // Decimal mint multiple
+    uint256 public decimalMintMultiple = 10;
 
     event MintComplete(
-        address minter,
+        address indexed minter,
         uint256 acceptedStablec,
-        uint256 mintedTemple,
+        uint256 mintedEarth,
         uint256 mintedFruit
     );
 
-    mapping(uint256 => bool) mintedrecord;
+    event NftAddressUpdated(
+        address indexed oldAddress,
+        address indexed newAddress
+    );
+
+    event MintMultipleUpdated(uint256 newMintMultiple);
+
+    mapping(uint256 => bool) public mintedRecord;
 
     constructor(
-        // simple token
         IERC20 _STABLEC,
         EarthERC20Token _EARTH,
         EarthStaking _STAKING,
         EarthTreasury _TREASURY,
-        uint256 _mintMultiple, // uint256 _unlockTimestamp
-        // Nft _NFT
+        uint256 _mintMultiple,
         SoulBound _SOULBOUND
     ) {
+        require(
+            address(_STABLEC) != address(0) &&
+                address(_EARTH) != address(0) &&
+                address(_STAKING) != address(0) &&
+                address(_TREASURY) != address(0) &&
+                address(_SOULBOUND) != address(0),
+            "Zero address not allowed"
+        );
+
         STABLEC = _STABLEC;
         EARTH = _EARTH;
         STAKING = _STAKING;
         TREASURY = _TREASURY;
-
         mintMultiple = _mintMultiple;
-        // NFT = _NFT;
         SOULBOUND = _SOULBOUND;
     }
 
-    // function updateNftaddress(Nft _NFT) external onlyOwner {
-    //     NFT = _NFT;
-    // }
-
-    function updateNftaddress(SoulBound _SOULBOUND) external onlyOwner {
+    function updateNftAddress(SoulBound _SOULBOUND) external onlyOwner {
+        require(address(_SOULBOUND) != address(0), "Zero address not allowed");
+        emit NftAddressUpdated(address(SOULBOUND), address(_SOULBOUND));
         SOULBOUND = _SOULBOUND;
     }
 
-    function updateMintMuliple(uint256 _mintMultiple) public onlyOwner {
+    function updateMintMultiple(uint256 _mintMultiple) external onlyOwner {
+        require(_mintMultiple > 0, "Mint multiple must be greater than zero");
         mintMultiple = _mintMultiple;
+        emit MintMultipleUpdated(_mintMultiple);
     }
 
     /**
@@ -86,25 +94,15 @@ contract Presale is Ownable, Pausable {
         _unpause();
     }
 
-    // added mint v1
-    function mint(uint256 _amountPaidStablec) external {
-        // require(NFT.balanceOf(msg.sender) > 0, "you own o nfts");
-        require(SOULBOUND.balanceOf(msg.sender) > 0, "you own o nfts");
-        require(_amountPaidStablec > 0, "amount must be greater then zero");
-        require(
-            STABLEC.allowance(msg.sender, address(this)) >= _amountPaidStablec,
-            "Insufficient stablecoin allowance"
-        );
+    function mint(uint256 _amountPaidStablec) external whenNotPaused {
+        require(SOULBOUND.balanceOf(msg.sender) > 0, "Must own NFTs");
+        require(_amountPaidStablec > 0, "Amount must be greater than zero");
 
         (uint256 _stablec, uint256 _earth) = TREASURY.intrinsicValueRatio();
 
-        console.log("_amountPaidStablec", _amountPaidStablec);
-
-        uint256 _earthMinted = (10 * _amountPaidStablec * _earth) /
+        uint256 _earthMinted = (10e18 * _amountPaidStablec * _earth) /
             _stablec /
             mintMultiple;
-
-        // pull stablec from staker and immediately transfer back to treasury
 
         SafeERC20.safeTransferFrom(
             STABLEC,
@@ -113,6 +111,6 @@ contract Presale is Ownable, Pausable {
             _amountPaidStablec
         );
 
-        EARTH.mint(msg.sender, _earthMinted); //user getting earth tokens
+        EARTH.mint(msg.sender, _earthMinted);
     }
 }

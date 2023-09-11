@@ -2,22 +2,29 @@ pragma solidity ^0.8.4;
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./EarthERC20Token.sol";
 import "./ITreasuryAllocation.sol";
 import "./MintAllowance.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // import "hardhat/console.sol";
 
+error DistributionPercentGiven(string message);
+error CannotHarvest(string message);
+error MintAllocateMustBeGreater(string message);
+error AmountStablecMustBeGreater(string message);
+error HarvertIsSmall(string message);
+error NoPoolSpecified(string message);
+error IndexAddressNotMatch(string message);
+
 contract EarthTreasury is Ownable {
     // Underlying Earth token
-    EarthERC20Token private EARTH;
+    EarthERC20Token private _EARTH;
 
     // underlying stable token we are holding and valuing treasury with
-    IERC20 private STABLEC;
+    IERC20 private _STABLEC;
 
     // Minted earth allocated to various investment contracts
     MintAllowance public MINT_ALLOWANCE;
@@ -34,7 +41,7 @@ contract EarthTreasury is Ownable {
 
     // Has treasury been seeded with STABLEC yet (essentially, has seedMint been called)
     // this will bootstrap IV
-    bool public seeded = false;
+    bool public seeded;
 
     // all active pools. A pool is anything
     // that gets allocated some portion of harvest
@@ -47,11 +54,19 @@ contract EarthTreasury is Ownable {
     uint256 public totalAllocationStablec;
 
     event RewardsHarvested(uint256 _amount);
-    event HarvestDistributed(address _contract, uint256 _amount);
+    event HarvestDistributed(address indexed _contract, uint256 _amount);
 
-    constructor(EarthERC20Token _EARTH, IERC20 _STABLEC) {
-        EARTH = _EARTH;
-        STABLEC = _STABLEC;
+    constructor(EarthERC20Token _earth, IERC20 _stablec) {
+        require(
+            address(_earth) != address(0),
+            "Zero address not allowed for _earth"
+        );
+        require(
+            address(_stablec) != address(0),
+            "Zero address not allowed for _stablec"
+        );
+        _EARTH = _earth;
+        _STABLEC = _stablec;
         MINT_ALLOWANCE = new MintAllowance(_EARTH);
     }
 
@@ -62,11 +77,16 @@ contract EarthTreasury is Ownable {
     /**
      * Seed treasury with STABLEC and Earth to bootstrap
      */
+
+    event TreasurySeeded(uint256 amountStablec, uint256 amountEarth);
+
     function seedMint(
         uint256 amountStablec,
         uint256 amountEarth
     ) external onlyOwner {
-        require(!seeded, "Owner has already seeded treasury");
+        if (seeded) {
+            revert("Owner has already seeded treasury");
+        }
         seeded = true;
 
         // can this go in the constructor?
@@ -74,12 +94,14 @@ contract EarthTreasury is Ownable {
         intrinsicValueRatio.earth = amountEarth;
 
         SafeERC20.safeTransferFrom(
-            STABLEC,
+            _STABLEC,
             msg.sender,
             address(this),
             amountStablec
         );
-        EARTH.mint(msg.sender, amountEarth);
+        _EARTH.mint(msg.sender, amountEarth);
+
+        emit TreasurySeeded(amountStablec, amountEarth);
     }
 
     /**
@@ -88,31 +110,31 @@ contract EarthTreasury is Ownable {
      * For auditing, we harvest and allocate in two steps
      */
     function harvest(uint256 distributionPercent) external onlyOwner {
-        require(
-            distributionPercent <= 100,
-            "Scaling factor interpreted as a %, needs to be between 0 (no harvest) and 100 (max harvest)"
-        );
+        if (distributionPercent > 100) {
+            revert DistributionPercentGiven("Percentage given more than 100%");
+        }
 
-        uint256 reserveStablec = STABLEC.balanceOf(address(this)) +
+        uint256 reserveStablec = _STABLEC.balanceOf(address(this)) +
             totalAllocationStablec;
 
         // Burn any excess earth, that is Any earth over and beyond harvestedRewardsEarth.
         // NOTE: If we don't do this, IV could drop...
-        if (EARTH.balanceOf(address(this)) > harvestedRewardsEarth) {
+        if (_EARTH.balanceOf(address(this)) > harvestedRewardsEarth) {
             // NOTE: there isn't a Reentrancy issue as we control the EARTH ERC20 contract, and configure
             //       treasury with an address on contract creation
-            EARTH.burn(EARTH.balanceOf(address(this)) - harvestedRewardsEarth);
+            _EARTH.burn(
+                _EARTH.balanceOf(address(this)) - harvestedRewardsEarth
+            );
         }
 
-        uint256 totalSupplyEarth = EARTH.totalSupply() -
-            EARTH.balanceOf(address(MINT_ALLOWANCE));
+        uint256 totalSupplyEarth = _EARTH.totalSupply() -
+            _EARTH.balanceOf(address(MINT_ALLOWANCE));
         uint256 impliedSupplyAtCurrentIVEarth = (reserveStablec *
             intrinsicValueRatio.earth) / intrinsicValueRatio.stablec;
 
-        require(
-            impliedSupplyAtCurrentIVEarth >= totalSupplyEarth,
-            "Cannot run harvest when IV drops"
-        );
+        if (impliedSupplyAtCurrentIVEarth < totalSupplyEarth) {
+            revert CannotHarvest("Cannot run harvest when IV drops");
+        }
 
         uint256 newHarvestEarth = ((impliedSupplyAtCurrentIVEarth -
             totalSupplyEarth) * distributionPercent) / 100;
@@ -121,7 +143,7 @@ contract EarthTreasury is Ownable {
         intrinsicValueRatio.stablec = reserveStablec;
         intrinsicValueRatio.earth = totalSupplyEarth + newHarvestEarth;
 
-        EARTH.mint(address(this), newHarvestEarth);
+        _EARTH.mint(address(this), newHarvestEarth);
         emit RewardsHarvested(newHarvestEarth);
     }
 
@@ -134,13 +156,20 @@ contract EarthTreasury is Ownable {
      * Only to be called if we have to post a treasury loss, and restart IV growth from
      * a new baseline.
      */
+    event IntrinsicValueReset(
+        uint256 newStablecReserve,
+        uint256 newEarthSupply
+    );
+
     function resetIV() external onlyOwner {
-        uint256 reserveStablec = STABLEC.balanceOf(address(this)) +
+        uint256 reserveStablec = _STABLEC.balanceOf(address(this)) +
             totalAllocationStablec;
-        uint256 totalSupplyEarth = EARTH.totalSupply() -
-            EARTH.balanceOf(address(MINT_ALLOWANCE));
+        uint256 totalSupplyEarth = _EARTH.totalSupply() -
+            _EARTH.balanceOf(address(MINT_ALLOWANCE));
         intrinsicValueRatio.stablec = reserveStablec;
         intrinsicValueRatio.earth = totalSupplyEarth;
+
+        emit IntrinsicValueReset(reserveStablec, totalSupplyEarth);
     }
 
     /**
@@ -159,7 +188,7 @@ contract EarthTreasury is Ownable {
                 allocatedRewards = harvestedRewardsEarth - totalAllocated;
             }
             totalAllocated += allocatedRewards;
-            SafeERC20.safeTransfer(EARTH, pools[i], allocatedRewards);
+            SafeERC20.safeTransfer(_EARTH, pools[i], allocatedRewards);
             emit HarvestDistributed(pools[i], allocatedRewards);
         }
         harvestedRewardsEarth -= totalAllocated;
@@ -168,20 +197,32 @@ contract EarthTreasury is Ownable {
     /**
      * Mint and Allocate treasury EARTH.
      */
+
+    event EarthMintedAndAllocated(
+        address indexed contractAddress,
+        uint256 amountEarth
+    );
+
     function mintAndAllocateEarth(
         address _contract,
         uint256 amountEarth
     ) external onlyOwner {
-        require(amountEarth > 0, "EARTH to mint and allocate must be > 0");
+        if (amountEarth <= 0) {
+            revert MintAllocateMustBeGreater(
+                "EARTH to mint and allocate must be > 0"
+            );
+        }
 
         // Mint and Allocate EARTH via MINT_ALLOWANCE helper
-        EARTH.mint(address(this), amountEarth);
+        _EARTH.mint(address(this), amountEarth);
         SafeERC20.safeIncreaseAllowance(
-            EARTH,
+            _EARTH,
             address(MINT_ALLOWANCE),
             amountEarth
         );
         MINT_ALLOWANCE.increaseMintAllowance(_contract, amountEarth);
+
+        emit EarthMintedAndAllocated(_contract, amountEarth);
     }
 
     /**
@@ -196,20 +237,37 @@ contract EarthTreasury is Ownable {
     /**
      * Allocate treasury STABLEC.
      */
+    event TreasuryStablecAllocated(
+        address indexed contractAddress,
+        uint256 amountStablec
+    );
+
     function allocateTreasuryStablec(
         ITreasuryAllocation _contract,
         uint256 amountStablec
     ) external onlyOwner {
-        require(amountStablec > 0, "STABLEC to allocate must be > 0");
+        if (amountStablec <= 0) {
+            revert AmountStablecMustBeGreater(
+                "STABLEC to allocate must be > 0"
+            );
+        }
 
         treasuryAllocationsStablec[_contract] += amountStablec;
         totalAllocationStablec += amountStablec;
-        SafeERC20.safeTransfer(STABLEC, address(_contract), amountStablec);
+        SafeERC20.safeTransfer(_STABLEC, address(_contract), amountStablec);
+
+        emit TreasuryStablecAllocated(address(_contract), amountStablec);
     }
 
     /**
      * Update treasury with latest mark to market for a given treasury allocation
      */
+    event MarkToMarketUpdated(
+        address indexed contractAddress,
+        uint256 oldReval,
+        uint256 newReval
+    );
+
     function updateMarkToMarket(
         ITreasuryAllocation _contract
     ) external onlyOwner {
@@ -217,6 +275,8 @@ contract EarthTreasury is Ownable {
         uint256 newReval = _contract.reval();
         totalAllocationStablec = totalAllocationStablec + newReval - oldReval;
         treasuryAllocationsStablec[_contract] = newReval;
+
+        emit MarkToMarketUpdated(address(_contract), oldReval, newReval);
     }
 
     /**
@@ -227,14 +287,14 @@ contract EarthTreasury is Ownable {
      */
     function withdraw(ITreasuryAllocation _contract) external onlyOwner {
         uint256 preWithdrawlReval = _contract.reval();
-        uint256 pendingWithdrawal = STABLEC.allowance(
+        uint256 pendingWithdrawal = _STABLEC.allowance(
             address(_contract),
             address(this)
         );
 
         // NOTE: Reentrancy considered and it's safe STABLEC is a well known unchanging contract
         SafeERC20.safeTransferFrom(
-            STABLEC,
+            _STABLEC,
             address(_contract),
             address(this),
             pendingWithdrawal
@@ -244,7 +304,9 @@ contract EarthTreasury is Ownable {
         totalAllocationStablec = totalAllocationStablec - pendingWithdrawal;
         treasuryAllocationsStablec[_contract] -= pendingWithdrawal;
 
-        require(postWithdrawlReval + pendingWithdrawal == preWithdrawlReval);
+        if (postWithdrawlReval + pendingWithdrawal != preWithdrawlReval) {
+            revert("Not Successful");
+        }
     }
 
     /**
@@ -262,14 +324,14 @@ contract EarthTreasury is Ownable {
     function ejectTreasuryAllocation(
         ITreasuryAllocation _contract
     ) external onlyOwner {
-        uint256 pendingWithdrawal = STABLEC.allowance(
+        uint256 pendingWithdrawal = _STABLEC.allowance(
             address(_contract),
             address(this)
         );
         totalAllocationStablec -= treasuryAllocationsStablec[_contract];
         treasuryAllocationsStablec[_contract] = 0;
         SafeERC20.safeTransferFrom(
-            STABLEC,
+            _STABLEC,
             address(_contract),
             address(this),
             pendingWithdrawal
@@ -279,11 +341,18 @@ contract EarthTreasury is Ownable {
     /**
      * Add or update a pool, and transfer in treasury assets
      */
+    event PoolUpserted(
+        address indexed updatedContract,
+        uint256 newPoolHarvestShare
+    );
+
     function upsertPool(
         address _contract,
         uint96 _poolHarvestShare
     ) external onlyOwner {
-        require(_poolHarvestShare > 0, "Harvest share must be > 0");
+        if (_poolHarvestShare <= 0) {
+            revert HarvertIsSmall("Harvest share must be > 0");
+        }
 
         totalHarvestShares =
             totalHarvestShares +
@@ -296,21 +365,30 @@ contract EarthTreasury is Ownable {
         }
 
         poolHarvestShare[_contract] = _poolHarvestShare;
+
+        emit PoolUpserted(_contract, _poolHarvestShare);
     }
 
     /**
      * Remove a given investment pool.
      */
-    function removePool(uint256 idx, address _contract) external onlyOwner {
-        require(idx < pools.length, "No pool at the specified index");
-        require(
-            pools[idx] == _contract,
-            "Pool at index and passed in address don't match"
-        );
+    event PoolRemoved(
+        uint256 indexed removedIndex,
+        address indexed removedContract
+    );
+
+    function removePool(uint256 idx) external onlyOwner {
+        if (idx >= pools.length) {
+            revert NoPoolSpecified("No pool at the specified index");
+        }
+
+        address removedContract = pools[idx];
 
         pools[idx] = pools[pools.length - 1];
         pools.pop();
-        totalHarvestShares -= poolHarvestShare[_contract];
-        delete poolHarvestShare[_contract];
+        totalHarvestShares -= poolHarvestShare[removedContract];
+        delete poolHarvestShare[removedContract];
+
+        emit PoolRemoved(idx, removedContract);
     }
 }
