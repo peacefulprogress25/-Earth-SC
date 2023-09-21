@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+error ADDRESS_ALREADY_WHITELISTED();
+
 contract SoulBound is ERC721 {
     string public uri;
     address public owner;
@@ -30,7 +32,7 @@ contract SoulBound is ERC721 {
 
     function addToWhiteList(address _add) public onlyOwner {
         if (whitelistedAddresses[_add]) {
-            revert("Address is already whitelisted");
+            revert ADDRESS_ALREADY_WHITELISTED();
         }
         whitelistedAddresses[_add] = true;
     }

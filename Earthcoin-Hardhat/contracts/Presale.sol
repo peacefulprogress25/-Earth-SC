@@ -11,6 +11,10 @@ import "./EarthTreasury.sol";
 import "./EarthStaking.sol";
 import "./SoulBound.sol";
 
+error ZERO_ADDRESS();
+error REQ_INPUT_GREATER_THAN_ZERO();
+error MUST_OWN_NFT();
+
 /**
  * Presale campaign, which lets users mint and stake based on current IV and a whitelist
  */
@@ -51,14 +55,15 @@ contract Presale is Ownable, Pausable {
         uint256 _mintMultiple,
         SoulBound _SOULBOUND
     ) {
-        require(
-            address(_STABLEC) != address(0) &&
-                address(_EARTH) != address(0) &&
-                address(_STAKING) != address(0) &&
-                address(_TREASURY) != address(0) &&
-                address(_SOULBOUND) != address(0),
-            "Zero address not allowed"
-        );
+        if (
+            address(_STABLEC) == address(0) ||
+            address(_EARTH) == address(0) ||
+            address(_STAKING) == address(0) ||
+            address(_TREASURY) == address(0) ||
+            address(_SOULBOUND) = address(0)
+        ) {
+            revert ZERO_ADDRESS();
+        }
 
         STABLEC = _STABLEC;
         EARTH = _EARTH;
@@ -69,13 +74,17 @@ contract Presale is Ownable, Pausable {
     }
 
     function updateNftAddress(SoulBound _SOULBOUND) external onlyOwner {
-        require(address(_SOULBOUND) != address(0), "Zero address not allowed");
+        if (address(_SOULBOUND) == address(0)) {
+            revert ZERO_ADDRESS();
+        }
         emit NftAddressUpdated(address(SOULBOUND), address(_SOULBOUND));
         SOULBOUND = _SOULBOUND;
     }
 
     function updateMintMultiple(uint256 _mintMultiple) external onlyOwner {
-        require(_mintMultiple > 0, "Mint multiple must be greater than zero");
+        if (_mintMultiple <= 0) {
+            revert REQ_INPUT_GREATER_THAN_ZERO();
+        }
         mintMultiple = _mintMultiple;
         emit MintMultipleUpdated(_mintMultiple);
     }
@@ -95,8 +104,12 @@ contract Presale is Ownable, Pausable {
     }
 
     function mint(uint256 _amountPaidStablec) external whenNotPaused {
-        require(SOULBOUND.balanceOf(msg.sender) > 0, "Must own NFTs");
-        require(_amountPaidStablec > 0, "Amount must be greater than zero");
+        if (SOULBOUND.balanceOf(msg.sender) <= 0) {
+            revert MUST_OWN_NFT();
+        }
+        if (_amountPaidStablec <= 0) {
+            revert REQ_INPUT_GREATER_THAN_ZERO();
+        }
 
         (uint256 _stablec, uint256 _earth) = TREASURY.intrinsicValueRatio();
 

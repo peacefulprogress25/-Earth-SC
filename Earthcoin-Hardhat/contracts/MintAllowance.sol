@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./EarthERC20Token.sol";
+import "contracts/EarthERC20Token.sol";
 
 /**
  * Newly minted earth allocated to various earth strategies
@@ -43,5 +43,12 @@ contract MintAllowance is Ownable {
         uint256 unusedMintAllowance = earth.allowance(address(this), _pool);
         SafeERC20.safeDecreaseAllowance(earth, _pool, unusedMintAllowance);
         earth.burn(unusedMintAllowance);
+    }
+
+    function getUnusedMintAllowance(
+        address _pool
+    ) public view onlyOwner returns (uint256) {
+        uint256 unusedMintAllowance = earth.allowance(address(this), _pool);
+        return (unusedMintAllowance);
     }
 }
