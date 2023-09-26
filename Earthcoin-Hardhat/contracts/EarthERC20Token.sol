@@ -16,24 +16,23 @@ contract EarthERC20Token is ERC20, ERC20Burnable, AccessControl {
         _grantRole(CAN_MINT, msg.sender);
     }
 
-    function mint(address _to, uint256 _amount) external {
-        if (!hasRole(CAN_MINT, msg.sender)) {
-            revert Caller_Cannot_mint();
-        }
+    modifier onlyAdmin() {
+        require(
+            hasRole(CAN_MINT, msg.sender),
+            " Caller cannot mint as NOT_ADMIN"
+        );
+        _;
+    }
+
+    function mint(address _to, uint256 _amount) external onlyAdmin {
         _mint(_to, _amount);
     }
 
-    function addMinter(address _account) external {
-        if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
-            revert Caller_Not_Admin();
-        }
+    function addMinter(address _account) external onlyAdmin {
         _grantRole(CAN_MINT, _account);
     }
 
-    function removeMinter(address _account) external {
-        if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
-            revert Caller_Not_Admin();
-        }
+    function removeMinter(address _account) external onlyAdmin {
         _revokeRole(CAN_MINT, _account);
     }
 }

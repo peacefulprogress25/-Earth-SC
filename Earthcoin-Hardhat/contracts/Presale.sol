@@ -60,7 +60,7 @@ contract Presale is Ownable, Pausable {
             address(_EARTH) == address(0) ||
             address(_STAKING) == address(0) ||
             address(_TREASURY) == address(0) ||
-            address(_SOULBOUND) = address(0)
+            address(_SOULBOUND) == address(0)
         ) {
             revert ZERO_ADDRESS();
         }
@@ -82,7 +82,7 @@ contract Presale is Ownable, Pausable {
     }
 
     function updateMintMultiple(uint256 _mintMultiple) external onlyOwner {
-        if (_mintMultiple <= 0) {
+        if (_mintMultiple == 0) {
             revert REQ_INPUT_GREATER_THAN_ZERO();
         }
         mintMultiple = _mintMultiple;
@@ -107,7 +107,7 @@ contract Presale is Ownable, Pausable {
         if (SOULBOUND.balanceOf(msg.sender) <= 0) {
             revert MUST_OWN_NFT();
         }
-        if (_amountPaidStablec <= 0) {
+        if (_amountPaidStablec == 0) {
             revert REQ_INPUT_GREATER_THAN_ZERO();
         }
 
