@@ -2,6 +2,7 @@ pragma solidity ^0.8.4;
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// @audit-report medium:  remove unused import
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -14,6 +15,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract EarthTreasury is Ownable {
     // Underlying Earth token
+    // @audit-report medium:  prefix private variables with _ 
+    // @audit-report medium:  would recommend keeping only constants as uppercase
+
     EarthERC20Token private EARTH;
 
     // underlying stable token we are holding and valuing treasury with
@@ -34,10 +38,12 @@ contract EarthTreasury is Ownable {
 
     // Has treasury been seeded with STABLEC yet (essentially, has seedMint been called)
     // this will bootstrap IV
+    // @audit-report low: assign of variable to false can be removed
     bool public seeded = false;
 
     // all active pools. A pool is anything
     // that gets allocated some portion of harvest
+    // QUESTION: Is there an interface which could be used instead of address?
     address[] public pools;
     mapping(address => uint96) public poolHarvestShare;
     uint96 public totalHarvestShares;
@@ -47,8 +53,11 @@ contract EarthTreasury is Ownable {
     uint256 public totalAllocationStablec;
 
     event RewardsHarvested(uint256 _amount);
+
+    // @audit-report medium:  would recommend declare _contract as indexed 
     event HarvestDistributed(address _contract, uint256 _amount);
 
+    // @audit-report medium:  add zero checks for constructor params
     constructor(EarthERC20Token _EARTH, IERC20 _STABLEC) {
         EARTH = _EARTH;
         STABLEC = _STABLEC;
@@ -66,10 +75,11 @@ contract EarthTreasury is Ownable {
         uint256 amountStablec,
         uint256 amountEarth
     ) external onlyOwner {
+        // @audit-report medium:  gas optimization use custom errors everywhere instead of require
         require(!seeded, "Owner has already seeded treasury");
         seeded = true;
 
-        // can this go in the constructor?
+        // QUESTION: can this go in the constructor?
         intrinsicValueRatio.stablec = amountStablec;
         intrinsicValueRatio.earth = amountEarth;
 
@@ -80,6 +90,7 @@ contract EarthTreasury is Ownable {
             amountStablec
         );
         EARTH.mint(msg.sender, amountEarth);
+        // @audit-report medium:  emit events for state changing functions
     }
 
     /**
@@ -88,6 +99,8 @@ contract EarthTreasury is Ownable {
      * For auditing, we harvest and allocate in two steps
      */
     function harvest(uint256 distributionPercent) external onlyOwner {
+        // @audit-report medium:  gas optimization use custom error instead of require
+        // QUESTION: would distributionPercent always be whole numbers ? Is 20.5% invalid ?
         require(
             distributionPercent <= 100,
             "Scaling factor interpreted as a %, needs to be between 0 (no harvest) and 100 (max harvest)"
@@ -109,6 +122,7 @@ contract EarthTreasury is Ownable {
         uint256 impliedSupplyAtCurrentIVEarth = (reserveStablec *
             intrinsicValueRatio.earth) / intrinsicValueRatio.stablec;
 
+        // @audit-report medium:  gas optimization use custom error instead of require
         require(
             impliedSupplyAtCurrentIVEarth >= totalSupplyEarth,
             "Cannot run harvest when IV drops"
@@ -141,6 +155,8 @@ contract EarthTreasury is Ownable {
             EARTH.balanceOf(address(MINT_ALLOWANCE));
         intrinsicValueRatio.stablec = reserveStablec;
         intrinsicValueRatio.earth = totalSupplyEarth;
+
+        // @audit-report medium:  emit event
     }
 
     /**
@@ -172,7 +188,10 @@ contract EarthTreasury is Ownable {
         address _contract,
         uint256 amountEarth
     ) external onlyOwner {
+        // @audit-report medium:  gas optimization use custom error instead of require
         require(amountEarth > 0, "EARTH to mint and allocate must be > 0");
+
+        // @audit-report medium:  check if _contract is valid pool
 
         // Mint and Allocate EARTH via MINT_ALLOWANCE helper
         EARTH.mint(address(this), amountEarth);
@@ -190,6 +209,7 @@ contract EarthTreasury is Ownable {
     function unallocateAndBurnUnusedMintedEarth(
         address _contract
     ) external onlyOwner {
+       // @audit-report medium:  check if _contract is valid pool
         MINT_ALLOWANCE.burnUnusedMintAllowance(_contract);
     }
 
@@ -200,8 +220,9 @@ contract EarthTreasury is Ownable {
         ITreasuryAllocation _contract,
         uint256 amountStablec
     ) external onlyOwner {
+        // @audit-report medium:  gas optimization use custom error instead of require
         require(amountStablec > 0, "STABLEC to allocate must be > 0");
-
+        // @audit-report medium:  check if _contract is valid pool
         treasuryAllocationsStablec[_contract] += amountStablec;
         totalAllocationStablec += amountStablec;
         SafeERC20.safeTransfer(STABLEC, address(_contract), amountStablec);
@@ -214,9 +235,12 @@ contract EarthTreasury is Ownable {
         ITreasuryAllocation _contract
     ) external onlyOwner {
         uint256 oldReval = treasuryAllocationsStablec[_contract];
+        // QUESTION: where is the implementation of ITreasuryAllocation
         uint256 newReval = _contract.reval();
         totalAllocationStablec = totalAllocationStablec + newReval - oldReval;
         treasuryAllocationsStablec[_contract] = newReval;
+
+        // @audit-report medium:  emit event
     }
 
     /**
@@ -244,6 +268,7 @@ contract EarthTreasury is Ownable {
         totalAllocationStablec = totalAllocationStablec - pendingWithdrawal;
         treasuryAllocationsStablec[_contract] -= pendingWithdrawal;
 
+        // @audit-report medium:  gas optimization use custom error instead of require
         require(postWithdrawlReval + pendingWithdrawal == preWithdrawlReval);
     }
 
@@ -262,6 +287,7 @@ contract EarthTreasury is Ownable {
     function ejectTreasuryAllocation(
         ITreasuryAllocation _contract
     ) external onlyOwner {
+        // @audit-report medium:  check if _contract is valid pool ?
         uint256 pendingWithdrawal = STABLEC.allowance(
             address(_contract),
             address(this)
@@ -280,9 +306,12 @@ contract EarthTreasury is Ownable {
      * Add or update a pool, and transfer in treasury assets
      */
     function upsertPool(
+        // QUESTION: is this ITreasuryAllocation ?
         address _contract,
+        // QUESTION: how is pool harvest share determined ?
         uint96 _poolHarvestShare
     ) external onlyOwner {
+        // @audit-report medium:  gas optimization use custom error instead of require
         require(_poolHarvestShare > 0, "Harvest share must be > 0");
 
         totalHarvestShares =
@@ -296,12 +325,20 @@ contract EarthTreasury is Ownable {
         }
 
         poolHarvestShare[_contract] = _poolHarvestShare;
+
+        // @audit-report medium:  emit event
     }
 
     /**
      * Remove a given investment pool.
      */
+
+    // @audit-report medium:  prefix idx with underscore 
     function removePool(uint256 idx, address _contract) external onlyOwner {
+        // @audit-report medium:  gas optimization use custom error instead of require
+        // @audit-report medium:  gas optimization the _contract seems to be redundant parameter. 
+        // @audit-report low: explore invoking `ejectTreasuryAllocation` to ensure allocated Earth is taken back 
+        // QUESTION: When you remove a pool, shouldn't the harvest be sent to the ITreasuryAllocation/pool ?
         require(idx < pools.length, "No pool at the specified index");
         require(
             pools[idx] == _contract,
@@ -312,5 +349,7 @@ contract EarthTreasury is Ownable {
         pools.pop();
         totalHarvestShares -= poolHarvestShare[_contract];
         delete poolHarvestShare[_contract];
+
+        // @audit-report medium:  emit event
     }
 }
